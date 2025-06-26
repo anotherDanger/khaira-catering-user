@@ -8,4 +8,5 @@ import (
 type Service interface {
 	GetProducts(ctx context.Context) ([]*domain.Products, error)
 	Login(ctx context.Context, username string, password string) (*domain.User, error)
+	Register(ctx context.Context, entity *domain.User) (*domain.User, error)
 }

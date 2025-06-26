@@ -5,6 +5,9 @@ import (
 	"database/sql"
 	"khaira-catering-user/domain"
 	"khaira-catering-user/repository"
+
+	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type ServiceImpl struct {
@@ -36,4 +39,27 @@ func (svc *ServiceImpl) Login(ctx context.Context, username string, password str
 
 	return result, nil
 
+}
+
+func (svc *ServiceImpl) Register(ctx context.Context, entity *domain.User) (*domain.User, error) {
+	userId := uuid.New()
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(entity.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, err
+	}
+
+	user := &domain.User{
+		Id:        userId,
+		Username:  entity.Username,
+		FirstName: entity.FirstName,
+		LastName:  entity.LastName,
+		Password:  string(hashedPassword),
+	}
+
+	result, err := svc.repo.Register(ctx, svc.db, user)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }
