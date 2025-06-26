@@ -37,6 +37,11 @@ func (svc *ServiceImpl) Login(ctx context.Context, username string, password str
 		return nil, err
 	}
 
+	err = bcrypt.CompareHashAndPassword([]byte(result.Password), []byte(password))
+	if err != nil {
+		return nil, err
+	}
+
 	return result, nil
 
 }
