@@ -19,6 +19,7 @@ var ServerSet = wire.NewSet(
 	service.NewServiceImpl,
 	controller.NewControllerImpl,
 	NewServer,
+	helper.NewElasticClient,
 )
 
 func InitServer() (*fiber.App, func(), error) {

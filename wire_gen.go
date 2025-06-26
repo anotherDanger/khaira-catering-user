@@ -22,7 +22,12 @@ func InitServer() (*fiber.App, func(), error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	repositoryRepository := repository.NewRepositoryImpl()
+	client, err := helper.NewElasticClient()
+	if err != nil {
+		cleanup()
+		return nil, nil, err
+	}
+	repositoryRepository := repository.NewRepositoryImpl(client)
 	serviceService := service.NewServiceImpl(db, repositoryRepository)
 	controllerController := controller.NewControllerImpl(serviceService)
 	app := NewServer(controllerController)
@@ -33,4 +38,4 @@ func InitServer() (*fiber.App, func(), error) {
 
 // injector.go:
 
-var ServerSet = wire.NewSet(helper.NewDb, repository.NewRepositoryImpl, service.NewServiceImpl, controller.NewControllerImpl, NewServer)
+var ServerSet = wire.NewSet(helper.NewDb, repository.NewRepositoryImpl, service.NewServiceImpl, controller.NewControllerImpl, NewServer, helper.NewElasticClient)
