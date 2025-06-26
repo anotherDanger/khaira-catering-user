@@ -9,9 +9,19 @@ import (
 
 func NewServer(handler controller.Controller) *fiber.App {
 	app := fiber.New()
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     "https://khatering.shop, http://localhost:3000",
+		AllowCredentials: true,
+		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
+		AllowMethods:     "GET, POST, PUT, DELETE",
+	}))
+
+	app.Options("/*", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
 
 	app.Get("/v1/products", handler.GetProducts)
+	app.Post("/v1/login", handler.Login)
 
 	return app
 }
