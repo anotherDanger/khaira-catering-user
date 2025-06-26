@@ -27,3 +27,13 @@ func (svc *ServiceImpl) GetProducts(ctx context.Context) ([]*domain.Products, er
 
 	return result, nil
 }
+
+func (svc *ServiceImpl) Login(ctx context.Context, username string, password string) (*domain.User, error) {
+	result, err := svc.repo.Login(ctx, svc.db, username, password)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+
+}
