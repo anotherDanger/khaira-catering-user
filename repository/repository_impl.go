@@ -54,3 +54,27 @@ func (repo *RepositoryImpl) Login(ctx context.Context, db *sql.DB, username stri
 
 	return nil, sql.ErrNoRows
 }
+
+func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *domain.User) (*domain.User, error) {
+	query := "INSERT INTO users(id, username, first_name, last_name, password) VALUES(?, ?, ?, ?, ?)"
+	result, err := db.ExecContext(ctx, query, entity.Username, entity.Id, entity.FirstName, entity.LastName, entity.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	rowAff, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+
+	if rowAff == 0 {
+		return nil, sql.ErrNoRows
+	}
+
+	user := &domain.User{
+		Id:       entity.Id,
+		Username: entity.Username,
+	}
+
+	return user, nil
+}
