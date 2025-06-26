@@ -3,13 +3,22 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
+	"fmt"
 	"khaira-catering-user/domain"
+	"strings"
+
+	"github.com/elastic/go-elasticsearch/v9"
 )
 
-type RepositoryImpl struct{}
+type RepositoryImpl struct {
+	elastic *elasticsearch.Client
+}
 
-func NewRepositoryImpl() Repository {
-	return &RepositoryImpl{}
+func NewRepositoryImpl(elastic *elasticsearch.Client) Repository {
+	return &RepositoryImpl{
+		elastic: elastic,
+	}
 }
 
 func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*domain.Products, error) {
@@ -66,6 +75,33 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 
 	if rowAff == 0 {
 		return nil, sql.ErrNoRows
+	}
+
+	doc := map[string]interface{}{
+		"id":       entity.Id,
+		"username": entity.Username,
+	}
+
+	body, err := json.Marshal(doc)
+	if err != nil {
+		return nil, err
+	}
+
+	docID := fmt.Sprint(entity.Id)
+
+	res, err := repo.elastic.Index(
+		"user_cart",
+		strings.NewReader(string(body)),
+		repo.elastic.Index.WithDocumentID(docID),
+		repo.elastic.Index.WithContext(ctx),
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return nil, fmt.Errorf("elasticsearch error: %s", res.Status())
 	}
 
 	user := &domain.User{
