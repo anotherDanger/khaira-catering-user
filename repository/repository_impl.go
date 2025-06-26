@@ -46,18 +46,15 @@ func (repo *RepositoryImpl) Login(ctx context.Context, db *sql.DB, username stri
 
 	row := &domain.User{
 		Username: user.Username,
+		Password: user.Password,
 	}
 
-	if user.Password == password {
-		return row, nil
-	}
-
-	return nil, sql.ErrNoRows
+	return row, nil
 }
 
 func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *domain.User) (*domain.User, error) {
 	query := "INSERT INTO users(id, username, first_name, last_name, password) VALUES(?, ?, ?, ?, ?)"
-	result, err := db.ExecContext(ctx, query, entity.Username, entity.Id, entity.FirstName, entity.LastName, entity.Password)
+	result, err := db.ExecContext(ctx, query, entity.Id, entity.Username, entity.FirstName, entity.LastName, entity.Password)
 	if err != nil {
 		return nil, err
 	}
