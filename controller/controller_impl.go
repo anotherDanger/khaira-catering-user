@@ -55,3 +55,19 @@ func (ctrl *ControllerImpl) Register(c *fiber.Ctx) error {
 
 	return web.SuccessResponse[*domain.User](c, fiber.StatusCreated, "OK", result)
 }
+
+func (ctrl *ControllerImpl) AddToCart(c *fiber.Ctx) error {
+	var product domain.Products
+	username := c.Params("username")
+	err := c.BodyParser(&product)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	err = ctrl.svc.AddToCart(c.Context(), username, &product)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	return web.SuccessResponse[any](c, fiber.StatusCreated, "OK", "Success")
+}
