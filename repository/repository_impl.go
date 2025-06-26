@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"encoding/json"
@@ -34,7 +35,7 @@ func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*dom
 		var product domain.Products
 		var description sql.NullString
 		var imageMetadata sql.NullString
-		if err := result.Scan(&product.Id, &product.Name, &description, &product.Stock, &product.Price, &imageMetadata, &product.CreatedAt, &product.ModifiedAt); err != nil {
+		if err := result.Scan(&product.Id, &product.Name, &description, &product.Price, &product.Stock, &imageMetadata, &product.CreatedAt, &product.ModifiedAt); err != nil {
 			return nil, err
 		}
 		products = append(products, &product)
@@ -87,7 +88,7 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 		return nil, err
 	}
 
-	docID := fmt.Sprint(entity.Id)
+	docID := fmt.Sprint(entity.Username)
 
 	res, err := repo.elastic.Index(
 		"user_cart",
@@ -110,4 +111,66 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 	}
 
 	return user, nil
+}
+
+func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, product *domain.Products) error {
+	newCartItem := map[string]interface{}{
+		"product_id":   product.Id,
+		"product_name": product.Name,
+		"quantity":     product.Stock,
+		"price":        product.Price,
+	}
+
+	script := `
+		if (ctx._source.cart == null) {
+			ctx._source.cart = [params.product];
+		} else {
+			def item = ctx._source.cart.find(p -> p.product_id == params.product.product_id);
+			if (item != null) {
+				item.quantity += params.product.quantity;
+			} else {
+				ctx._source.cart.add(params.product);
+			}
+		}
+	`
+
+	updateBody, err := json.Marshal(map[string]interface{}{
+		"script": map[string]interface{}{
+			"lang":   "painless",
+			"source": script,
+			"params": map[string]interface{}{
+				"product": newCartItem,
+			},
+		},
+		"upsert": map[string]interface{}{
+			"username": username,
+			"cart":     []interface{}{newCartItem},
+		},
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to marshal update request: %w", err)
+	}
+
+	res, err := repo.elastic.Update(
+		"user_cart",
+		username,
+		bytes.NewReader(updateBody),
+		repo.elastic.Update.WithContext(ctx),
+		repo.elastic.Update.WithRefresh("true"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update cart: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		var e map[string]interface{}
+		if err := json.NewDecoder(res.Body).Decode(&e); err != nil {
+			return fmt.Errorf("elasticsearch update error: %s", res.Status())
+		}
+		return fmt.Errorf("elasticsearch update error: %s: %v", res.Status(), e)
+	}
+
+	return nil
 }
