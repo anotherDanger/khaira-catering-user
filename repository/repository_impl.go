@@ -33,3 +33,24 @@ func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*dom
 
 	return products, nil
 }
+
+func (repo *RepositoryImpl) Login(ctx context.Context, db *sql.DB, username string, password string) (*domain.User, error) {
+	query := "SELECT username, password from users WHERE username = ?"
+
+	result := db.QueryRowContext(ctx, query, username)
+	var user domain.User
+
+	if err := result.Scan(&user.Username, &user.Password); err != nil {
+		return nil, err
+	}
+
+	row := &domain.User{
+		Username: user.Username,
+	}
+
+	if user.Password == password {
+		return row, nil
+	}
+
+	return nil, sql.ErrNoRows
+}

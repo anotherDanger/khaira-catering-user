@@ -8,4 +8,5 @@ import (
 
 type Repository interface {
 	GetProducts(ctx context.Context, db *sql.DB) ([]*domain.Products, error)
+	Login(ctx context.Context, db *sql.DB, username string, password string) (*domain.User, error)
 }
