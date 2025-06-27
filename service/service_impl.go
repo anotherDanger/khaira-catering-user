@@ -69,8 +69,8 @@ func (svc *ServiceImpl) Register(ctx context.Context, entity *domain.User) (*dom
 	return result, nil
 }
 
-func (svc *ServiceImpl) AddToCart(ctx context.Context, username string, product *domain.Products) error {
-	err := svc.repo.AddToCart(ctx, username, product)
+func (svc *ServiceImpl) AddToCart(ctx context.Context, username string, product *domain.Products, quantity int) error {
+	err := svc.repo.AddToCart(ctx, username, product, quantity)
 	if err != nil {
 		return err
 	}
