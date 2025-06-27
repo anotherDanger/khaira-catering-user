@@ -220,3 +220,42 @@ func (repo *RepositoryImpl) GetCart(ctx context.Context, username string) ([]*do
 
 	return result, nil
 }
+
+func (repo *RepositoryImpl) DeleteCartItem(ctx context.Context, username string, productID string) error {
+	updateScript := map[string]interface{}{
+		"script": map[string]interface{}{
+			"source": `
+				if (ctx._source.cart != null) {
+					ctx._source.cart.removeIf(item -> item.product_id == params.product_id);
+				}
+			`,
+			"lang": "painless",
+			"params": map[string]interface{}{
+				"product_id": productID,
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(updateScript); err != nil {
+		return fmt.Errorf("failed to encode update script: %w", err)
+	}
+
+	res, err := repo.elastic.Update(
+		"user_cart",
+		username,
+		&buf,
+		repo.elastic.Update.WithContext(ctx),
+		repo.elastic.Update.WithRefresh("true"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to execute update: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return fmt.Errorf("elasticsearch update error: %s", res.Status())
+	}
+
+	return nil
+}
