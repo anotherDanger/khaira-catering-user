@@ -11,4 +11,5 @@ type Repository interface {
 	Login(ctx context.Context, db *sql.DB, username string, password string) (*domain.User, error)
 	Register(ctx context.Context, db *sql.DB, entity *domain.User) (*domain.User, error)
 	AddToCart(ctx context.Context, username string, product *domain.Products) error
+	GetCart(ctx context.Context, username string) ([]*domain.CartItem, error)
 }

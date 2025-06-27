@@ -174,3 +174,49 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 
 	return nil
 }
+
+func (repo *RepositoryImpl) GetCart(ctx context.Context, username string) ([]*domain.CartItem, error) {
+	query := map[string]interface{}{
+		"query": map[string]interface{}{
+			"match": map[string]interface{}{
+				"username": username,
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		return nil, fmt.Errorf("failed to encode query: %w", err)
+	}
+
+	res, err := repo.elastic.Search(
+		repo.elastic.Search.WithContext(ctx),
+		repo.elastic.Search.WithIndex("user_cart"),
+		repo.elastic.Search.WithBody(&buf),
+		repo.elastic.Search.WithTrackTotalHits(true),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("search request failed: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.IsError() {
+		return nil, fmt.Errorf("elasticsearch search error: %s", res.Status())
+	}
+
+	var esRes domain.ESResponse
+	if err := json.NewDecoder(res.Body).Decode(&esRes); err != nil {
+		return nil, fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	if len(esRes.Hits.Hits) == 0 {
+		return nil, nil
+	}
+
+	var result []*domain.CartItem
+	for i := range esRes.Hits.Hits[0].Source.Cart {
+		result = append(result, &esRes.Hits.Hits[0].Source.Cart[i])
+	}
+
+	return result, nil
+}
