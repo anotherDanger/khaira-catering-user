@@ -113,11 +113,11 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 	return user, nil
 }
 
-func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, product *domain.Products) error {
+func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, product *domain.Products, quantity int) error {
 	newCartItem := map[string]interface{}{
 		"product_id":   product.Id,
 		"product_name": product.Name,
-		"quantity":     product.Stock,
+		"quantity":     quantity,
 		"price":        product.Price,
 	}
 
@@ -127,7 +127,7 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 		} else {
 			def item = ctx._source.cart.find(p -> p.product_id == params.product.product_id);
 			if (item != null) {
-				item.quantity += params.product.quantity;
+				item.quantity += params.quantity;
 			} else {
 				ctx._source.cart.add(params.product);
 			}
