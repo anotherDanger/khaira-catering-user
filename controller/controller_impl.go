@@ -98,3 +98,20 @@ func (ctrl *ControllerImpl) DeleteCartItem(c *fiber.Ctx) error {
 
 	return web.SuccessResponse[any](c, fiber.StatusNoContent, "OK", "Success")
 }
+
+func (ctrl *ControllerImpl) DeleteCartItemByQuantity(c *fiber.Ctx) error {
+	username := c.Params("username")
+	productId := c.Params("product_id")
+	quantity := c.Params("quantity")
+	quantityInt, err := strconv.Atoi(quantity)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	err = ctrl.svc.DeleteCartItemByQuantity(c.Context(), username, productId, quantityInt)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	return web.SuccessResponse[any](c, fiber.StatusNoContent, "OK", "Success")
+}

@@ -9,4 +9,5 @@ type Controller interface {
 	AddToCart(c *fiber.Ctx) error
 	GetCart(c *fiber.Ctx) error
 	DeleteCartItem(c *fiber.Ctx) error
+	DeleteCartItemByQuantity(c *fiber.Ctx) error
 }
