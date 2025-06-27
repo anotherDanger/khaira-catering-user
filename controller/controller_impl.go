@@ -5,6 +5,7 @@ import (
 	"khaira-catering-user/domain"
 	"khaira-catering-user/service"
 	"khaira-catering-user/web"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -59,12 +60,17 @@ func (ctrl *ControllerImpl) Register(c *fiber.Ctx) error {
 func (ctrl *ControllerImpl) AddToCart(c *fiber.Ctx) error {
 	var product domain.Products
 	username := c.Params("username")
-	err := c.BodyParser(&product)
+	quantity := c.Params("quantity")
+	quantityInt, err := strconv.Atoi(quantity)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+	err = c.BodyParser(&product)
 	if err != nil {
 		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
 	}
 
-	err = ctrl.svc.AddToCart(c.Context(), username, &product)
+	err = ctrl.svc.AddToCart(c.Context(), username, &product, quantityInt)
 	if err != nil {
 		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
 	}
