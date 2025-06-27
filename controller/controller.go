@@ -7,4 +7,5 @@ type Controller interface {
 	Login(c *fiber.Ctx) error
 	Register(c *fiber.Ctx) error
 	AddToCart(c *fiber.Ctx) error
+	GetCart(c *fiber.Ctx) error
 }

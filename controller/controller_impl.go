@@ -71,3 +71,13 @@ func (ctrl *ControllerImpl) AddToCart(c *fiber.Ctx) error {
 
 	return web.SuccessResponse[any](c, fiber.StatusCreated, "OK", "Success")
 }
+
+func (ctrl *ControllerImpl) GetCart(c *fiber.Ctx) error {
+	username := c.Params("username")
+	cart, err := ctrl.svc.GetCart(c.Context(), username)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	return web.SuccessResponse[[]*domain.CartItem](c, fiber.StatusOK, "OK", cart)
+}
