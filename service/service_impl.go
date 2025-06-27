@@ -86,3 +86,12 @@ func (svc *ServiceImpl) GetCart(ctx context.Context, username string) ([]*domain
 
 	return cart, nil
 }
+
+func (svc *ServiceImpl) DeleteCartItem(ctx context.Context, username string, productID string) error {
+	err := svc.repo.DeleteCartItem(ctx, username, productID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

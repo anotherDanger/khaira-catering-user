@@ -11,4 +11,5 @@ type Service interface {
 	Register(ctx context.Context, entity *domain.User) (*domain.User, error)
 	AddToCart(ctx context.Context, username string, product *domain.Products) error
 	GetCart(ctx context.Context, username string) ([]*domain.CartItem, error)
+	DeleteCartItem(ctx context.Context, username string, productID string) error
 }
