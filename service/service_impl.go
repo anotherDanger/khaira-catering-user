@@ -77,3 +77,12 @@ func (svc *ServiceImpl) AddToCart(ctx context.Context, username string, product 
 
 	return nil
 }
+
+func (svc *ServiceImpl) GetCart(ctx context.Context, username string) ([]*domain.CartItem, error) {
+	cart, err := svc.repo.GetCart(ctx, username)
+	if err != nil {
+		return nil, err
+	}
+
+	return cart, nil
+}

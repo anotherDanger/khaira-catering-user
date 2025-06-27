@@ -10,4 +10,5 @@ type Service interface {
 	Login(ctx context.Context, username string, password string) (*domain.User, error)
 	Register(ctx context.Context, entity *domain.User) (*domain.User, error)
 	AddToCart(ctx context.Context, username string, product *domain.Products) error
+	GetCart(ctx context.Context, username string) ([]*domain.CartItem, error)
 }
