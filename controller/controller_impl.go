@@ -81,3 +81,14 @@ func (ctrl *ControllerImpl) GetCart(c *fiber.Ctx) error {
 
 	return web.SuccessResponse[[]*domain.CartItem](c, fiber.StatusOK, "OK", cart)
 }
+
+func (ctrl *ControllerImpl) DeleteCartItem(c *fiber.Ctx) error {
+	username := c.Params("username")
+	productID := c.Params("product_id")
+	err := ctrl.svc.DeleteCartItem(c.Context(), username, productID)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "OK", err.Error())
+	}
+
+	return web.SuccessResponse[any](c, fiber.StatusNoContent, "OK", "Success")
+}
