@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"khaira-catering-user/domain"
 	"strings"
@@ -113,7 +114,46 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 	return user, nil
 }
 
-func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, product *domain.Products, quantity int) error {
+func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, product *domain.Products, quantity int, db *sql.DB) error {
+	var productStock int
+	err := db.QueryRowContext(ctx, "SELECT stock FROM products WHERE id = ?", product.Id).Scan(&productStock)
+	if err != nil {
+		return err
+	}
+
+	getRes, err := repo.elastic.Get("user_cart", username)
+	if err != nil {
+		return err
+	}
+	defer getRes.Body.Close()
+
+	if getRes.StatusCode != 404 {
+		if getRes.IsError() {
+			return fmt.Errorf("error getting cart: %s", getRes.Status())
+		}
+		var cartData struct {
+			Source struct {
+				Cart []struct {
+					ProductID string `json:"product_id"`
+					Quantity  int    `json:"quantity"`
+				} `json:"cart"`
+			} `json:"_source"`
+		}
+		if err := json.NewDecoder(getRes.Body).Decode(&cartData); err != nil {
+			return err
+		}
+		currentQty := 0
+		for _, item := range cartData.Source.Cart {
+			if item.ProductID == product.Id {
+				currentQty = item.Quantity
+				break
+			}
+		}
+		if currentQty+quantity > productStock {
+			return errors.New("melebihi stok produk")
+		}
+	}
+
 	newCartItem := map[string]interface{}{
 		"product_id":   product.Id,
 		"product_name": product.Name,
@@ -139,7 +179,8 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 			"lang":   "painless",
 			"source": script,
 			"params": map[string]interface{}{
-				"product": newCartItem,
+				"product":  newCartItem,
+				"quantity": quantity,
 			},
 		},
 		"upsert": map[string]interface{}{
@@ -147,7 +188,6 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 			"cart":     []interface{}{newCartItem},
 		},
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to marshal update request: %w", err)
 	}
@@ -255,6 +295,77 @@ func (repo *RepositoryImpl) DeleteCartItem(ctx context.Context, username string,
 
 	if res.IsError() {
 		return fmt.Errorf("elasticsearch update error: %s", res.Status())
+	}
+
+	return nil
+}
+
+func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, username, productId string, quantity int) error {
+	res, err := repo.elastic.Get(
+		"user_cart",
+		username,
+		repo.elastic.Get.WithContext(ctx),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to get document: %w", err)
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == 404 {
+		return fmt.Errorf("cart not found for user: %s", username)
+	}
+
+	var data map[string]interface{}
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return fmt.Errorf("failed to decode cart: %w", err)
+	}
+
+	source := data["_source"].(map[string]interface{})
+	cart := source["cart"].([]interface{})
+	newCart := make([]interface{}, 0)
+
+	for _, item := range cart {
+		cartItem := item.(map[string]interface{})
+		if cartItem["product_id"] == productId {
+			qty := 0
+			switch v := cartItem["quantity"].(type) {
+			case float64:
+				qty = int(v)
+			case int:
+				qty = v
+			}
+			remaining := qty - quantity
+			if remaining > 0 {
+				cartItem["quantity"] = remaining
+				newCart = append(newCart, cartItem)
+			}
+			// kalau 0 atau kurang, tidak dimasukkan lagi
+		} else {
+			newCart = append(newCart, cartItem)
+		}
+	}
+
+	source["cart"] = newCart
+
+	body, err := json.Marshal(source)
+	if err != nil {
+		return fmt.Errorf("failed to marshal updated cart: %w", err)
+	}
+
+	indexRes, err := repo.elastic.Index(
+		"user_cart",
+		strings.NewReader(string(body)),
+		repo.elastic.Index.WithDocumentID(username),
+		repo.elastic.Index.WithContext(ctx),
+		repo.elastic.Index.WithRefresh("true"),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update cart: %w", err)
+	}
+	defer indexRes.Body.Close()
+
+	if indexRes.IsError() {
+		return fmt.Errorf("elasticsearch index error: %s", indexRes.Status())
 	}
 
 	return nil
