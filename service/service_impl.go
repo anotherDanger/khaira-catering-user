@@ -70,7 +70,7 @@ func (svc *ServiceImpl) Register(ctx context.Context, entity *domain.User) (*dom
 }
 
 func (svc *ServiceImpl) AddToCart(ctx context.Context, username string, product *domain.Products, quantity int) error {
-	err := svc.repo.AddToCart(ctx, username, product, quantity)
+	err := svc.repo.AddToCart(ctx, username, product, quantity, svc.db)
 	if err != nil {
 		return err
 	}
@@ -89,6 +89,15 @@ func (svc *ServiceImpl) GetCart(ctx context.Context, username string) ([]*domain
 
 func (svc *ServiceImpl) DeleteCartItem(ctx context.Context, username string, productID string) error {
 	err := svc.repo.DeleteCartItem(ctx, username, productID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (svc *ServiceImpl) DeleteCartItemByQuantity(ctx context.Context, username string, productId string, quantity int) error {
+	err := svc.repo.DeleteCartItemByQuantity(ctx, username, productId, quantity)
 	if err != nil {
 		return err
 	}
