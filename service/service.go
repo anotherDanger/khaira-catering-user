@@ -13,4 +13,5 @@ type Service interface {
 	GetCart(ctx context.Context, username string) ([]*domain.CartItem, error)
 	DeleteCartItem(ctx context.Context, username string, productID string) error
 	DeleteCartItemByQuantity(ctx context.Context, username string, productId string, quantity int) error
+	CreateOrder(ctx context.Context, orderDetails *domain.Checkout) error
 }

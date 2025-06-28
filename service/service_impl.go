@@ -104,3 +104,27 @@ func (svc *ServiceImpl) DeleteCartItemByQuantity(ctx context.Context, username s
 
 	return nil
 }
+
+func (svc *ServiceImpl) CreateOrder(ctx context.Context, orderDetails *domain.Checkout) error {
+	tx, err := svc.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+		} else {
+			tx.Commit()
+		}
+	}()
+
+	id := uuid.New()
+
+	err = svc.repo.CreateOrder(ctx, tx, orderDetails, id)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
