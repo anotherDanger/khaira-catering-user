@@ -10,4 +10,5 @@ type Controller interface {
 	GetCart(c *fiber.Ctx) error
 	DeleteCartItem(c *fiber.Ctx) error
 	DeleteCartItemByQuantity(c *fiber.Ctx) error
+	CreateOrder(c *fiber.Ctx) error
 }

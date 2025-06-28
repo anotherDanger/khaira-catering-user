@@ -115,3 +115,18 @@ func (ctrl *ControllerImpl) DeleteCartItemByQuantity(c *fiber.Ctx) error {
 
 	return web.SuccessResponse[any](c, fiber.StatusNoContent, "OK", "Success")
 }
+
+func (ctrl *ControllerImpl) CreateOrder(c *fiber.Ctx) error {
+	var order domain.Checkout
+	err := c.BodyParser(&order)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	err = ctrl.svc.CreateOrder(c.Context(), &order)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	return web.SuccessResponse[any](c, fiber.StatusNoContent, "OK", "Success")
+}
