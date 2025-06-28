@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"khaira-catering-user/domain"
+
+	"github.com/google/uuid"
 )
 
 type Repository interface {
@@ -14,4 +16,5 @@ type Repository interface {
 	GetCart(ctx context.Context, username string) ([]*domain.CartItem, error)
 	DeleteCartItem(ctx context.Context, username string, productID string) error
 	DeleteCartItemByQuantity(ctx context.Context, username, productId string, quantity int) error
+	CreateOrder(ctx context.Context, tx *sql.Tx, orderDetails *domain.Checkout, id uuid.UUID) error
 }
