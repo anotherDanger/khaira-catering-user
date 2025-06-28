@@ -27,6 +27,7 @@ func NewServer(handler controller.Controller) *fiber.App {
 	app.Get("/v1/cart/:username", handler.GetCart)
 	app.Delete("/v1/cart/:username/:product_id", handler.DeleteCartItem)
 	app.Delete("/v1/cart/:username/:product_id/:quantity", handler.DeleteCartItemByQuantity)
+	app.Post("/v1/checkout", handler.CreateOrder)
 
 	return app
 }
