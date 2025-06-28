@@ -28,7 +28,7 @@ func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*dom
 
 	result, err := db.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("gagal mengambil data produk")
 	}
 
 	var products []*domain.Products
@@ -37,7 +37,7 @@ func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*dom
 		var description sql.NullString
 		var imageMetadata sql.NullString
 		if err := result.Scan(&product.Id, &product.Name, &description, &product.Price, &product.Stock, &imageMetadata, &product.CreatedAt, &product.ModifiedAt); err != nil {
-			return nil, err
+			return nil, errors.New("gagal membaca data produk")
 		}
 		products = append(products, &product)
 	}
@@ -52,31 +52,26 @@ func (repo *RepositoryImpl) Login(ctx context.Context, db *sql.DB, username stri
 	var user domain.User
 
 	if err := result.Scan(&user.Username, &user.Password); err != nil {
-		return nil, err
+		return nil, errors.New("user tidak ditemukan")
 	}
 
-	row := &domain.User{
-		Username: user.Username,
-		Password: user.Password,
-	}
-
-	return row, nil
+	return &user, nil
 }
 
 func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *domain.User) (*domain.User, error) {
 	query := "INSERT INTO users(id, username, first_name, last_name, password) VALUES(?, ?, ?, ?, ?)"
 	result, err := db.ExecContext(ctx, query, entity.Id, entity.Username, entity.FirstName, entity.LastName, entity.Password)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("registrasi gagal")
 	}
 
 	rowAff, err := result.RowsAffected()
 	if err != nil {
-		return nil, err
+		return nil, errors.New("registrasi gagal")
 	}
 
 	if rowAff == 0 {
-		return nil, sql.ErrNoRows
+		return nil, errors.New("registrasi gagal")
 	}
 
 	doc := map[string]interface{}{
@@ -86,7 +81,7 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 
 	body, err := json.Marshal(doc)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("gagal menyiapkan data pengguna")
 	}
 
 	docID := fmt.Sprint(entity.Username)
@@ -98,38 +93,36 @@ func (repo *RepositoryImpl) Register(ctx context.Context, db *sql.DB, entity *do
 		repo.elastic.Index.WithContext(ctx),
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("gagal membuat cart pengguna")
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		return nil, fmt.Errorf("elasticsearch error: %s", res.Status())
+		return nil, errors.New("gagal menyimpan cart pengguna")
 	}
 
-	user := &domain.User{
+	return &domain.User{
 		Id:       entity.Id,
 		Username: entity.Username,
-	}
-
-	return user, nil
+	}, nil
 }
 
 func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, product *domain.Products, quantity int, db *sql.DB) error {
 	var productStock int
 	err := db.QueryRowContext(ctx, "SELECT stock FROM products WHERE id = ?", product.Id).Scan(&productStock)
 	if err != nil {
-		return err
+		return errors.New("produk tidak ditemukan")
 	}
 
 	getRes, err := repo.elastic.Get("user_cart", username)
 	if err != nil {
-		return err
+		return errors.New("gagal mengambil data cart")
 	}
 	defer getRes.Body.Close()
 
 	if getRes.StatusCode != 404 {
 		if getRes.IsError() {
-			return fmt.Errorf("error getting cart: %s", getRes.Status())
+			return errors.New("gagal mengambil data cart")
 		}
 		var cartData struct {
 			Source struct {
@@ -140,7 +133,7 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 			} `json:"_source"`
 		}
 		if err := json.NewDecoder(getRes.Body).Decode(&cartData); err != nil {
-			return err
+			return errors.New("gagal membaca data cart")
 		}
 		currentQty := 0
 		for _, item := range cartData.Source.Cart {
@@ -189,7 +182,7 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("failed to marshal update request: %w", err)
+		return errors.New("gagal menyiapkan data pembaruan cart")
 	}
 
 	res, err := repo.elastic.Update(
@@ -200,16 +193,12 @@ func (repo *RepositoryImpl) AddToCart(ctx context.Context, username string, prod
 		repo.elastic.Update.WithRefresh("true"),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to update cart: %w", err)
+		return errors.New("gagal memperbarui cart")
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		var e map[string]interface{}
-		if err := json.NewDecoder(res.Body).Decode(&e); err != nil {
-			return fmt.Errorf("elasticsearch update error: %s", res.Status())
-		}
-		return fmt.Errorf("elasticsearch update error: %s: %v", res.Status(), e)
+		return errors.New("gagal memperbarui cart")
 	}
 
 	return nil
@@ -226,7 +215,7 @@ func (repo *RepositoryImpl) GetCart(ctx context.Context, username string) ([]*do
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
-		return nil, fmt.Errorf("failed to encode query: %w", err)
+		return nil, errors.New("gagal menyiapkan permintaan pencarian")
 	}
 
 	res, err := repo.elastic.Search(
@@ -236,17 +225,17 @@ func (repo *RepositoryImpl) GetCart(ctx context.Context, username string) ([]*do
 		repo.elastic.Search.WithTrackTotalHits(true),
 	)
 	if err != nil {
-		return nil, fmt.Errorf("search request failed: %w", err)
+		return nil, errors.New("pencarian cart gagal")
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		return nil, fmt.Errorf("elasticsearch search error: %s", res.Status())
+		return nil, errors.New("pencarian cart gagal")
 	}
 
 	var esRes domain.ESResponse
 	if err := json.NewDecoder(res.Body).Decode(&esRes); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, errors.New("gagal membaca hasil pencarian")
 	}
 
 	if len(esRes.Hits.Hits) == 0 {
@@ -278,7 +267,7 @@ func (repo *RepositoryImpl) DeleteCartItem(ctx context.Context, username string,
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(updateScript); err != nil {
-		return fmt.Errorf("failed to encode update script: %w", err)
+		return errors.New("gagal menyiapkan data penghapusan")
 	}
 
 	res, err := repo.elastic.Update(
@@ -289,12 +278,12 @@ func (repo *RepositoryImpl) DeleteCartItem(ctx context.Context, username string,
 		repo.elastic.Update.WithRefresh("true"),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to execute update: %w", err)
+		return errors.New("gagal menghapus item dari cart")
 	}
 	defer res.Body.Close()
 
 	if res.IsError() {
-		return fmt.Errorf("elasticsearch update error: %s", res.Status())
+		return errors.New("gagal menghapus item dari cart")
 	}
 
 	return nil
@@ -307,17 +296,17 @@ func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, userna
 		repo.elastic.Get.WithContext(ctx),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to get document: %w", err)
+		return errors.New("gagal mengambil data cart")
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode == 404 {
-		return fmt.Errorf("cart not found for user: %s", username)
+		return errors.New("cart tidak ditemukan")
 	}
 
 	var data map[string]interface{}
 	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
-		return fmt.Errorf("failed to decode cart: %w", err)
+		return errors.New("gagal membaca cart")
 	}
 
 	source := data["_source"].(map[string]interface{})
@@ -339,7 +328,6 @@ func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, userna
 				cartItem["quantity"] = remaining
 				newCart = append(newCart, cartItem)
 			}
-			// kalau 0 atau kurang, tidak dimasukkan lagi
 		} else {
 			newCart = append(newCart, cartItem)
 		}
@@ -349,7 +337,7 @@ func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, userna
 
 	body, err := json.Marshal(source)
 	if err != nil {
-		return fmt.Errorf("failed to marshal updated cart: %w", err)
+		return errors.New("gagal menyiapkan data cart terbaru")
 	}
 
 	indexRes, err := repo.elastic.Index(
@@ -360,12 +348,12 @@ func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, userna
 		repo.elastic.Index.WithRefresh("true"),
 	)
 	if err != nil {
-		return fmt.Errorf("failed to update cart: %w", err)
+		return errors.New("gagal memperbarui cart")
 	}
 	defer indexRes.Body.Close()
 
 	if indexRes.IsError() {
-		return fmt.Errorf("elasticsearch index error: %s", indexRes.Status())
+		return errors.New("gagal memperbarui cart")
 	}
 
 	return nil
