@@ -128,3 +128,12 @@ func (svc *ServiceImpl) CreateOrder(ctx context.Context, orderDetails *domain.Ch
 
 	return nil
 }
+
+func (svc *ServiceImpl) GetOrderHistory(ctx context.Context, username string) ([]*domain.Checkout, error) {
+	res, err := svc.repo.GetOrderHistory(ctx, svc.db, username)
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

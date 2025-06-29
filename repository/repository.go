@@ -17,4 +17,5 @@ type Repository interface {
 	DeleteCartItem(ctx context.Context, username string, productID string) error
 	DeleteCartItemByQuantity(ctx context.Context, username, productId string, quantity int) error
 	CreateOrder(ctx context.Context, tx *sql.Tx, orderDetails *domain.Checkout, id uuid.UUID) error
+	GetOrderHistory(ctx context.Context, db *sql.DB, username string) ([]*domain.Checkout, error)
 }

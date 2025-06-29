@@ -362,7 +362,7 @@ func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, userna
 
 func (repo *RepositoryImpl) CreateOrder(ctx context.Context, tx *sql.Tx, orderDetails *domain.Checkout, id uuid.UUID) error {
 	orderId := id
-	query := "INSERT INTO orders(id, product_id, product_name, nama, no_hp, alamat, kecamatan, desa, jumlah, username, quantity, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO orders(id, product_id, product_name, nama, no_hp, alamat, kecamatan, desa, username, quantity, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	_, err := tx.ExecContext(ctx, query,
 		orderId,
 		orderDetails.ProductId,
@@ -396,4 +396,26 @@ func (repo *RepositoryImpl) CreateOrder(ctx context.Context, tx *sql.Tx, orderDe
 	}
 
 	return nil
+}
+
+func (repo *RepositoryImpl) GetOrderHistory(ctx context.Context, db *sql.DB, username string) ([]*domain.Checkout, error) {
+	query := "SELECT id, product_id, product_name, nama, no_hp, alamat, kecamatan, desa, jumlah, username, quantity, created_at, status FROM orders WHERE username = ?"
+	res, err := db.QueryContext(ctx, query, username)
+	if err != nil {
+		return nil, err
+	}
+
+	var history []*domain.Checkout
+
+	for res.Next() {
+		var item domain.Checkout
+		if err := res.Scan(&item.Id, &item.ProductId, &item.ProductName, &item.Nama, &item.NoHp, &item.Alamat, &item.Kecamatan, &item.Desa, &item.Total, &item.Username, &item.Quantity, &item.CreatedAt, &item.Status); err != nil {
+			return nil, err
+		}
+		history = append(history, &item)
+	}
+
+	defer res.Close()
+
+	return history, nil
 }

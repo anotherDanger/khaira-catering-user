@@ -130,3 +130,13 @@ func (ctrl *ControllerImpl) CreateOrder(c *fiber.Ctx) error {
 
 	return web.SuccessResponse[any](c, fiber.StatusNoContent, "OK", "Success")
 }
+
+func (ctrl *ControllerImpl) GetOrderHistory(c *fiber.Ctx) error {
+	username := c.Params("username")
+	res, err := ctrl.svc.GetOrderHistory(c.Context(), username)
+	if err != nil {
+		return web.ErrorResponse(c, fiber.StatusBadRequest, "Error", err.Error())
+	}
+
+	return web.SuccessResponse[[]*domain.Checkout](c, fiber.StatusOK, "OK", res)
+}
