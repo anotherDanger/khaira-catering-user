@@ -20,6 +20,7 @@ var ServerSet = wire.NewSet(
 	controller.NewControllerImpl,
 	NewServer,
 	helper.NewElasticClient,
+	helper.NewValidator,
 )
 
 func InitServer() (*fiber.App, func(), error) {

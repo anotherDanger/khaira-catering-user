@@ -29,6 +29,8 @@ func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*dom
 		return nil, helper.NewError("gagal mengambil data produk")
 	}
 
+	defer result.Close()
+
 	var products []*domain.Products
 	for result.Next() {
 		var product domain.Products
@@ -37,6 +39,15 @@ func (repo *RepositoryImpl) GetProducts(ctx context.Context, db *sql.DB) ([]*dom
 		if err := result.Scan(&product.Id, &product.Name, &description, &product.Price, &product.Stock, &imageMetadata, &product.CreatedAt, &product.ModifiedAt); err != nil {
 			return nil, helper.NewError("gagal membaca data produk")
 		}
+
+		if description.Valid {
+			product.Description = description.String
+		}
+
+		if imageMetadata.Valid {
+			product.ImageMetadata = imageMetadata.String
+		}
+
 		products = append(products, &product)
 	}
 
@@ -275,7 +286,7 @@ func (repo *RepositoryImpl) DeleteCartItemByQuantity(ctx context.Context, userna
 }
 
 func (repo *RepositoryImpl) CreateOrder(ctx context.Context, tx *sql.Tx, orderDetails *domain.Checkout, id uuid.UUID) error {
-	query := "INSERT INTO orders(id, product_id, product_name, nama, no_hp, alamat, kecamatan, desa, username, quantity, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	query := "INSERT INTO orders(id, product_id, product_name, name, phone, alamat, kecamatan, desa, username, quantity, total) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	_, err := tx.ExecContext(ctx, query, id, orderDetails.ProductId, orderDetails.ProductName, orderDetails.Nama, orderDetails.NoHp, orderDetails.Alamat, orderDetails.Kecamatan, orderDetails.Desa, orderDetails.Username, orderDetails.Quantity, orderDetails.Total)
 	if err != nil {
 		return err
@@ -299,7 +310,7 @@ func (repo *RepositoryImpl) CreateOrder(ctx context.Context, tx *sql.Tx, orderDe
 }
 
 func (repo *RepositoryImpl) GetOrderHistory(ctx context.Context, db *sql.DB, username string) ([]*domain.Checkout, error) {
-	query := "SELECT id, product_id, product_name, nama, no_hp, alamat, kecamatan, desa, jumlah, username, quantity, created_at, status FROM orders WHERE username = ?"
+	query := "SELECT id, product_id, product_name, name, phone, alamat, kecamatan, desa, total, username, quantity, created_at, status FROM orders WHERE username = ?"
 	res, err := db.QueryContext(ctx, query, username)
 	if err != nil {
 		return nil, err

@@ -7,15 +7,14 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/joho/godotenv"
 )
 
 func NewDb() (*sql.DB, func(), error) {
 	//WITHOUT DOCKER!
-	err := godotenv.Load()
-	if err != nil {
-		return nil, nil, err
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	return nil, nil, err
+	// }
 
 	user := os.Getenv("DB_USER")
 	pass := os.Getenv("DB_PASS")

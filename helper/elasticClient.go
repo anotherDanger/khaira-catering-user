@@ -5,14 +5,13 @@ import (
 	"os"
 
 	"github.com/elastic/go-elasticsearch/v9"
-	"github.com/joho/godotenv"
 )
 
 func NewElasticClient() (*elasticsearch.Client, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return nil, err
-	}
+	// err := godotenv.Load()
+	// if err != nil {
+	// 	return nil, err
+	// }
 
 	elasticHost := os.Getenv("ELASTICHOST")
 

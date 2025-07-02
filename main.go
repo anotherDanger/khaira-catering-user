@@ -17,6 +17,8 @@ func NewServer(handler controller.Controller) *fiber.App {
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
+	app.Static("/images", "/app/uploads")
+
 	app.Get("/v1/products", handler.GetProducts)
 	app.Post("/v1/login", handler.Login)
 	app.Post("/v1/register", handler.Register)

@@ -29,7 +29,8 @@ func InitServer() (*fiber.App, func(), error) {
 	}
 	repositoryRepository := repository.NewRepositoryImpl(client)
 	serviceService := service.NewServiceImpl(db, repositoryRepository)
-	controllerController := controller.NewControllerImpl(serviceService)
+	validate := helper.NewValidator()
+	controllerController := controller.NewControllerImpl(serviceService, validate)
 	app := NewServer(controllerController)
 	return app, func() {
 		cleanup()
@@ -38,4 +39,4 @@ func InitServer() (*fiber.App, func(), error) {
 
 // injector.go:
 
-var ServerSet = wire.NewSet(helper.NewDb, repository.NewRepositoryImpl, service.NewServiceImpl, controller.NewControllerImpl, NewServer, helper.NewElasticClient)
+var ServerSet = wire.NewSet(helper.NewDb, repository.NewRepositoryImpl, service.NewServiceImpl, controller.NewControllerImpl, NewServer, helper.NewElasticClient, helper.NewValidator)
