@@ -80,10 +80,6 @@ func (ctrl *ControllerImpl) AddToCart(c *fiber.Ctx) error {
 		return web.ErrorResponse(c, fiber.StatusBadRequest, "error", err.Error())
 	}
 
-	if err := ctrl.validate.Struct(product); err != nil {
-		return web.ErrorResponse(c, fiber.StatusBadRequest, "error", "validation failed: invalid input")
-	}
-
 	err = ctrl.svc.AddToCart(c.Context(), username, &product, quantityInt)
 	if err != nil {
 		return web.ErrorResponse(c, fiber.StatusBadRequest, "error", err.Error())
