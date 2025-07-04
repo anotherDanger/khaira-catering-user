@@ -11,7 +11,7 @@ import (
 func NewServer(handler controller.Controller) *fiber.App {
 	app := fiber.New()
 	app.Use(cors.New(cors.Config{
-		AllowOrigins:     "https://khatering.shop,https://khatering.netlify.app",
+		AllowOrigins:     "https://khatering.shop,https://khatering.netlify.app,https://khatering.store",
 		AllowCredentials: true,
 		AllowHeaders:     "Origin, Content-Type, Accept, Authorization",
 		AllowMethods:     "GET, POST, PUT, DELETE, OPTIONS",
