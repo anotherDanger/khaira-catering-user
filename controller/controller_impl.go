@@ -37,10 +37,6 @@ func (ctrl *ControllerImpl) Login(c *fiber.Ctx) error {
 		return web.ErrorResponse(c, fiber.StatusBadRequest, "error", err.Error())
 	}
 
-	if err := ctrl.validate.Struct(user); err != nil {
-		return web.ErrorResponse(c, fiber.StatusBadRequest, "error", "validation failed: invalid input")
-	}
-
 	result, err := ctrl.svc.Login(c.Context(), user.Username, user.Password)
 	if err != nil {
 		return web.ErrorResponse(c, fiber.StatusBadRequest, "error", err.Error())
